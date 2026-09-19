@@ -1,0 +1,48 @@
+name: Package MCP
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'drizzle/**'
+      - 'Dockerfile'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/package.yml'
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: false
+        type: string
+
+env:
+  VERSION: ${{ inputs.version || 'latest' }}
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Docker build copies package.json into the image
+      - name: Change version
+        if: ${{ inputs.version }}
+        run: jq --arg v "$VERSION" '.version = $v' package.json > package.tmp && mv package.tmp package.json
+
+      - name: Build Docker Image
+        run: docker build -t "tcgp-mcp:$VERSION" .
+
+      - name: Save Docker Image
+        run: docker save "tcgp-mcp:$VERSION" -o "tcgp-mcp-$VERSION.tar"
+
+      - name: Upload Docker Image
+        uses: actions/upload-artifact@v6
+        with:
+          name: docker-image-${{ env.VERSION }}
+          path: tcgp-mcp-${{ env.VERSION }}.tar
+          if-no-files-found: error
