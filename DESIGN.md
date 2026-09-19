@@ -22,7 +22,7 @@ Not goals: deck builder, prices, meta stats, local image storage.
 TypeScript everywhere. Compiled with `tsc`. Real TS `enum`s.
 
 | Part            | Pick                                                                   | Reason                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Runtime         | Node 24 LTS                                                            | Current LTS.                                                                                            |
 | Language        | TypeScript, `tsc` build to `dist/`                                     | Full TS. Enums, strict mode.                                                                            |
 | Dev runner      | `tsx`                                                                  | Runs and watches `src/*.ts` without build, for dev and tests.                                           |
@@ -86,7 +86,7 @@ Two paths only. Search path reads store. Ingest path writes store. Both use `emb
 All config lives in env vars. No CLI flags. List values are comma-separated; each value is one option, so combinations need no extra enum member.
 
 | Var                                    | Default / example                                      | Meaning                                                                                                     |
-| --------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| -------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `LANGUAGES`                            | `en` / `en,de,fr`                                      | Languages to ingest and serve. Each must be in `CardSource.languages`, else startup fails.                  |
 | `TRANSPORTS`                           | `stdio` / `stdio,http`                                 | Transports to start. Values: `stdio`, `http`. Both listed: both run in one process.                         |
 | `PORT`                                 | `3000`                                                 | HTTP port. Used when `TRANSPORTS` includes `http`.                                                          |
@@ -334,7 +334,7 @@ flowchart LR
 No `CardStore` interface. Swap means changing URL. One implementation makes interface pure ceremony. `db/store.ts` exports plain functions:
 
 | Function                           | Job                                                                   |
-| ------------------------------------ | ------------------------------------------------------------------------ |
+| ----------------------------------- | ----------------------------------------------------------------------- |
 | `openDb(url)` (in `client.ts`)     | Connect, run pending drizzle migrations. Once at startup, with retry. |
 | `getMeta()` / `setMeta(entries)`   | Scheduler state. `null` value deletes key.                            |
 | `getSetFingerprints()`             | Set-tier diff for ingest.                                             |
@@ -497,7 +497,7 @@ flowchart TD
 ```
 
 | Tier  | Hash                              | Skips                                             |
-| ------ | ------------------------------------ | ---------------------------------------------------- |
+| ----- | ---------------------------------- | -------------------------------------------------- |
 | Set   | `sets.fingerprint` (from adapter) | whole set fetch (~200 card requests per language) |
 | Card  | `cards.hash`, `card_texts.hash`   | DB write                                          |
 | Embed | `card_texts.embed_hash`           | embedding call (costs money on API models)        |
@@ -697,7 +697,7 @@ Fallback result (card missing in `de`):
 ```
 
 | Command                             | Does                                                                                 |
-| ------------------------------------ | --------------------------------------------------------------------------------------- |
+| ----------------------------------- | -------------------------------------------------------------------------------------- |
 | `pnpm build`                        | Compile `src/` to `dist/`.                                                           |
 | `pnpm start`                        | Run compiled server.                                                                 |
 | `pnpm dev`                          | Run TS directly, restart on change.                                                  |
@@ -928,7 +928,7 @@ Tests:
 Deviations from draft v4, found while building (2026-09-19):
 
 | Topic              | Draft v4                             | Implemented                                    | Reason                                                                                                          |
-| -------------------- | --------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| ------------------ | -------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | DB writes          | One interactive transaction per set  | One `db.batch()` per set                       | libsql opens new connection per interactive transaction: pragmas lost, `:memory:` DB lost. Batch is atomic too. |
 | Foreign keys       | `PRAGMA foreign_keys = ON` + cascade | Explicit child deletes                         | Pragma is per connection; not reliable over HTTP.                                                               |
 | Embedding          | Embed before set transaction         | Separate embed phase over `embed_hash IS NULL` | Content commits even when embedder is down. Model change reuses same path.                                      |
@@ -949,7 +949,7 @@ Data findings from first live ingest (2026-09-19, `en,de`, 15 sets, 3722 texts e
 ## Decisions
 
 | #   | Topic               | Decision                                                                                                                                  |
-| ----- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1   | Language            | TypeScript everywhere. `tsc` build step, real TS enums.                                                                                   |
 | 2   | Embeddings          | Admin picks model via `EMBEDDING_MODEL`, through Vercel AI SDK. API or local (OpenAI-compatible endpoint, Ollama in compose).             |
 | 3   | Storage             | libSQL. One drizzle schema, one migration folder. `DATABASE_URL` picks embedded file or libsql-server container. Native vector functions. |

@@ -96,7 +96,7 @@ All configuration is via environment variables; there are no CLI flags. List-val
 comma-separated.
 
 | Variable                               | Default / example                                      | Meaning                                                                                                                                                                                  |
-| --------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `LANGUAGES`                            | `en` / `en,de,fr`                                      | Languages to ingest and serve. Each must be supported by the card source, or startup fails.                                                                                              |
 | `TRANSPORTS`                           | `stdio` / `stdio,http`                                 | Transports to start. Values: `stdio`, `http`. Both can run at once, in one process.                                                                                                      |
 | `PORT`                                 | `3000`                                                 | HTTP port. Used when `TRANSPORTS` includes `http`.                                                                                                                                       |
@@ -203,7 +203,7 @@ needed.
 ## Development commands
 
 | Command                             | Does                                                                      |
-| ------------------------------------ | -------------------------------------------------------------------------- |
+| ----------------------------------- | ------------------------------------------------------------------------- |
 | `pnpm build`                        | Compile `src/` to `dist/`.                                                |
 | `pnpm start`                        | Run the compiled server (`node dist/index.js`).                           |
 | `pnpm dev`                          | Run TypeScript directly with `tsx`, restarting on file changes.           |
