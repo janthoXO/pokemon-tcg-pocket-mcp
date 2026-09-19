@@ -168,4 +168,4 @@ Card data from [TCGdex](https://tcgdex.dev). Pokémon and Pokémon TCG Pocket ar
 
 ## License
 
-ISC, as declared in [package.json](package.json).
+[MIT](LICENSE). Free to use, modify and share, including commercially.
