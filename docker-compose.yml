@@ -1,0 +1,58 @@
+services:
+  mcp:
+    build: .
+    ports:
+      - '127.0.0.1:3000:3000' # localhost only: no HTTP auth, see README
+    environment:
+      LANGUAGES: en,de
+      TRANSPORTS: http # image default, listed for clarity
+      DATABASE_URL: http://libsql:8080
+      EMBEDDING_MODEL: compatible:bge-m3
+      EMBEDDING_BASE_URL: http://ollama:11434/v1
+      UPDATE_INTERVAL_HOURS: 24
+    depends_on:
+      libsql:
+        condition: service_started
+      ollama-pull:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 30s
+    restart: unless-stopped
+
+  libsql:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    environment:
+      SQLD_NODE: primary
+    volumes:
+      - dbdata:/var/lib/sqld
+    # no ports: only reachable inside compose network
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    volumes:
+      - ollama:/root/.ollama
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 5s
+    restart: unless-stopped
+
+  ollama-pull: # one-shot: make sure embedding model exists
+    image: ollama/ollama
+    environment:
+      OLLAMA_HOST: ollama:11434
+    entrypoint: ['ollama', 'pull', 'bge-m3']
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  dbdata:
+  ollama:
