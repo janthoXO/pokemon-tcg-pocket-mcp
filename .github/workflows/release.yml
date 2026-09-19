@@ -1,0 +1,86 @@
+name: Release MCP
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'drizzle/**'
+      - 'Dockerfile'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/**'
+      - '.github/actions/**'
+
+# Serialize releases so two pushes can't compute the same next version
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  versioning:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Determine Version
+        id: version
+        uses: ./.github/actions/determine-version
+
+  build:
+    uses: ./.github/workflows/build.yml
+
+  package:
+    needs: versioning
+    uses: ./.github/workflows/package.yml
+    with:
+      version: ${{ needs.versioning.outputs.version }}
+
+  release:
+    needs: [versioning, build, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      VERSION: ${{ needs.versioning.outputs.version }}
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: docker-image-${{ env.VERSION }}
+          path: ./artifacts
+
+      - name: Load Docker Image
+        run: docker load -i "./artifacts/tcgp-mcp-$VERSION.tar"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GHCR
+        run: |
+          IMAGE_ID=$(echo "ghcr.io/${{ github.repository }}/server" | tr '[:upper:]' '[:lower:]')
+          docker tag "tcgp-mcp:$VERSION" "$IMAGE_ID:$VERSION"
+          docker tag "tcgp-mcp:$VERSION" "$IMAGE_ID:latest"
+          docker push "$IMAGE_ID:$VERSION"
+          docker push "$IMAGE_ID:latest"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          files: ./artifacts/*.tar
+          generate_release_notes: true
