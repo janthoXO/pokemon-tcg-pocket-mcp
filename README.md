@@ -1,125 +1,72 @@
-# pokemon-tcg-pocket-mcp
+# Pokémon TCG Pocket MCP Server
 
-An MCP server for searching Pokémon TCG Pocket cards. It fetches card data by itself on an
-interval from [TCGdex](https://tcgdex.dev), stores it in a local database, and exposes one tool,
-`search_cards`, over MCP (stdio or Streamable HTTP). It supports card text in six languages:
-`en`, `fr`, `de`, `es`, `it`, `pt-br`.
+**Pokémon TCG Pocket MCP Server is an open-source [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that lets AI assistants like Claude search every Pokémon TCG Pocket card by name, type, rarity, set, evolution stage, ability effect and attack, in six languages.**
 
-> [!WARNING]
-> **No HTTP auth.** Anyone who can reach the HTTP port can call `search_cards`. The server binds
-> to `127.0.0.1` by default, and the Docker Compose setup maps the port to `127.0.0.1` only. Do
-> not expose this port to a public network. If you need public access, put a reverse proxy with
-> authentication in front of it.
+Ask your AI assistant questions like _"Which Water Pokémon can heal?"_ or _"Show me all Crown rare cards from Genetic Apex"_, and it looks the answer up in a local, always up-to-date card database instead of guessing.
 
-> [!WARNING]
-> **No database auth.** The `libsql` service in `docker-compose.yml` runs with no auth and no
-> published port; only the other containers in the same Compose network can reach it. Do not
-> publish its port. If you need to expose the database (for example, to point another instance at
-> it from outside the Compose network), set `SQLD_AUTH_JWT_KEY` on the libsql-server and
-> `DATABASE_AUTH_TOKEN` on the MCP server, and pass both as secrets (`.env` file or Docker
-> secrets), never as plain command-line arguments.
+## Key features
 
-> [!WARNING]
-> **Single instance only.** Run one MCP server per database. The ingest lock is in-memory, not a
-> database lease. Two instances pointed at the same database will both run ingest: data stays
-> consistent (hashes and atomic batch writes prevent corruption), but the load on TCGdex doubles for no
-> benefit.
+- **One search tool for all cards.** Pokémon, Items, Supporters, Tools and Stadiums from every Pokémon TCG Pocket set (Genetic Apex, Mythical Island, Space-Time Smackdown and all later sets).
+- **Search by meaning.** Describe an ability or attack in your own words (_"discard energy for big damage"_) and get the cards that do that, not just keyword matches.
+- **Typo-tolerant names.** _"charizrd"_ still finds Charizard. Set names work the same way.
+- **Exact filters.** Type (Grass, Fire, Water, ...), rarity (One Diamond to Crown), evolution stage (Basic, Stage 1, Stage 2), card category and set.
+- **Six languages.** English, French, German, Spanish, Italian and Brazilian Portuguese card texts. Cards not yet translated fall back to English.
+- **Always up to date.** Downloads new sets and card fixes automatically every 24 hours from [TCGdex](https://tcgdex.dev).
+- **Runs locally.** Card data and search stay on your machine. Works with a free local embedding model through [Ollama](https://ollama.com), or with OpenAI.
+- **Works with any MCP client.** Claude Desktop, Claude Code, Cursor, VS Code and other MCP-compatible apps, over stdio or HTTP.
 
-## What it does
+## Example questions
 
-The server periodically fetches Pokémon TCG Pocket card data from the TCGdex API, computes hashes
-to avoid redundant writes and re-embeddings, and stores everything in a libSQL database (an
-embedded file or a separate libsql-server container, picked by `DATABASE_URL`). It exposes a
-single MCP tool, `search_cards`, that combines exact filters (type, category, rarity, stage, set),
-fuzzy name/set matching, and semantic search over card effects and attacks using text embeddings.
+Once connected, ask your assistant things like:
 
-Card text is stored per language. Canonical values (type, stage, rarity, category) are always in
-English, regardless of the requested language, so filtering works the same everywhere.
+- "Find Pokémon TCG Pocket cards that heal damage from all your Pokémon."
+- "Which Stage 2 Water Pokémon are there?"
+- "Show me the Crown rare cards from Genetic Apex."
+- "What does Glurak-ex do?" (German card names work too)
+- "Which Supporter cards let me draw cards?"
+- "Find Fire Pokémon whose attacks discard energy."
 
-## Quickstart: Docker Compose
+## How to install
 
-This is the easiest way to run everything (MCP server, libSQL database, and Ollama for local
-embeddings) together.
+You need either [Docker](https://docs.docker.com/get-docker/) or [Node.js](https://nodejs.org) 24+ with [pnpm](https://pnpm.io).
+
+### Option 1: Docker Compose (recommended)
+
+This runs the server, its database and a local embedding model together.
 
 ```sh
+git clone https://github.com/janthoXO/pokemon-tcg-pocket-mcp.git
+cd pokemon-tcg-pocket-mcp
 docker compose up -d
 ```
 
-This starts:
+The server is then available at `http://127.0.0.1:3000/mcp`. The first start downloads the embedding model (about 1 GB) and all card data, which takes a few minutes.
 
-- `mcp` — the MCP server, listening on `http://127.0.0.1:3000/mcp` (see the warnings above about
-  exposure).
-- `libsql` — the database, only reachable from inside the Compose network.
-- `ollama` plus a one-shot `ollama-pull` service that pulls the `bge-m3` embedding model before
-  the MCP server needs it.
-
-The first `ollama-pull` run downloads a roughly 1 GB model, so the first `docker compose up` will
-take a while and use significant bandwidth and disk. First ingest (a few thousand cards per
-language) also takes a few minutes to embed on CPU; later ingests only re-embed changed cards.
-
-To use an embedded database file instead of the `libsql` service, remove the `libsql` service from
-`docker-compose.yml`, set `DATABASE_URL: file:/data/cards.db` on `mcp`, and mount a volume at
-`/data`. To use OpenAI instead of Ollama for embeddings, remove the `ollama` and `ollama-pull`
-services and set `EMBEDDING_MODEL: openai:text-embedding-3-small` plus `OPENAI_API_KEY` on `mcp`.
-
-## Quickstart: local development
+### Option 2: Node.js
 
 ```sh
+git clone https://github.com/janthoXO/pokemon-tcg-pocket-mcp.git
+cd pokemon-tcg-pocket-mcp
 pnpm install
+pnpm build
+ollama pull bge-m3   # free local embedding model, requires Ollama
 ```
 
-You need an embedding model reachable over an OpenAI-compatible `/v1/embeddings` endpoint. The
-simplest local option is [Ollama](https://ollama.com):
+Your MCP client then starts the server itself (see below).
+
+## How to connect your AI assistant
+
+### Claude Code
+
+With Docker Compose running:
 
 ```sh
-ollama pull bge-m3
+claude mcp add --transport http pokemon-tcg-pocket http://127.0.0.1:3000/mcp
 ```
 
-Then run the server directly from source, restarting automatically on file changes:
+### Claude Desktop, Cursor and other MCP clients
 
-```sh
-pnpm dev
-```
-
-By default this uses `LANGUAGES=en`, `TRANSPORTS=stdio`, an embedded database at
-`file:./data/cards.db`, and `EMBEDDING_MODEL=compatible:bge-m3` against
-`http://localhost:11434/v1` (Ollama's default). Override any of these with environment variables,
-for example:
-
-```sh
-LANGUAGES=en,de,fr TRANSPORTS=stdio,http pnpm dev
-```
-
-## Configuration
-
-All configuration is via environment variables; there are no CLI flags. List-valued variables are
-comma-separated.
-
-| Variable                               | Default / example                                      | Meaning                                                                                                                                                                                  |
-| -------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LANGUAGES`                            | `en` / `en,de,fr`                                      | Languages to ingest and serve. Each must be supported by the card source, or startup fails.                                                                                              |
-| `TRANSPORTS`                           | `stdio` / `stdio,http`                                 | Transports to start. Values: `stdio`, `http`. Both can run at once, in one process.                                                                                                      |
-| `PORT`                                 | `3000`                                                 | HTTP port. Used when `TRANSPORTS` includes `http`.                                                                                                                                       |
-| `HOST`                                 | `127.0.0.1`                                            | HTTP bind address. The Docker image sets this to `0.0.0.0` internally.                                                                                                                   |
-| `DATABASE_URL`                         | `file:./data/cards.db` (default), `http://libsql:8080` | Database location. `file:` is an embedded SQLite-compatible file. `http(s):`/`libsql:` is a libsql-server (or Turso cloud) URL. The Docker image defaults this to `file:/data/cards.db`. |
-| `DATABASE_AUTH_TOKEN`                  | `eyJ...`                                               | JWT for a libsql-server with auth enabled. Leave unset for no auth.                                                                                                                      |
-| `EMBEDDING_MODEL`                      | `openai:text-embedding-3-small`, `compatible:bge-m3`   | `<provider>:<model>`. Provider is `openai` or `compatible`.                                                                                                                              |
-| `EMBEDDING_BASE_URL`                   | `http://ollama:11434/v1`                               | Used with the `compatible` provider. Ollama, LM Studio, vLLM, and llama.cpp all serve an OpenAI-style `/v1/embeddings` endpoint.                                                         |
-| `EMBEDDING_API_KEY` / `OPENAI_API_KEY` | `sk-...`                                               | API key, if the provider needs one.                                                                                                                                                      |
-| `CARD_SOURCE`                          | `tcgdex`                                               | Which card data source to use.                                                                                                                                                           |
-| `UPDATE_INTERVAL_HOURS`                | `24`                                                   | How often ingest runs.                                                                                                                                                                   |
-| `FULL_REFRESH_DAYS`                    | `7`                                                    | How often ingest ignores set fingerprints and re-checks every card, to catch errata.                                                                                                     |
-
-`DATABASE_URL` defaults to `file:./data/cards.db` when running locally. The Docker image overrides
-this default to `file:/data/cards.db`, matching the `/data` volume set up in the Dockerfile.
-
-## Connecting an MCP client
-
-### stdio
-
-For clients that launch the server as a subprocess (Claude Desktop, Claude Code, and similar),
-point `command` at `node` and `args` at the built entry point. Run `pnpm build` first so
-`dist/index.js` exists.
+Add this to your client's MCP configuration (for Claude Desktop: `claude_desktop_config.json`). Replace the path with your checkout:
 
 ```json
 {
@@ -128,89 +75,97 @@ point `command` at `node` and `args` at the built entry point. Run `pnpm build` 
       "command": "node",
       "args": ["/path/to/pokemon-tcg-pocket-mcp/dist/index.js"],
       "env": {
-        "LANGUAGES": "en,de,fr",
-        "TRANSPORTS": "stdio",
-        "DATABASE_URL": "file:/path/to/pokemon-tcg-pocket-mcp/data/cards.db",
-        "EMBEDDING_MODEL": "compatible:bge-m3",
-        "EMBEDDING_BASE_URL": "http://localhost:11434/v1"
+        "LANGUAGES": "en,de",
+        "DATABASE_URL": "file:/path/to/pokemon-tcg-pocket-mcp/data/cards.db"
       }
     }
   }
 }
 ```
 
-### HTTP
+Set `LANGUAGES` to the languages you want (`en`, `fr`, `de`, `es`, `it`, `pt-br`). Use an absolute `DATABASE_URL` path, because MCP clients often start the server from a different working directory. All settings are listed in the [developer guide](README_DEV.md#configuration).
 
-When the server is already running with `TRANSPORTS` including `http` (for example, via
-`docker compose up`), point the client at the `/mcp` endpoint instead of launching a subprocess:
+## How to use the search
 
+The server gives your assistant one tool, `search_cards`. Your assistant fills in the fields for you; you just ask in normal language. Every field except `language` is optional, and empty fields match all cards.
+
+| Field      | What it does                              | Example              |
+| ---------- | ----------------------------------------- | -------------------- |
+| `language` | Language of the card texts (required)     | `en`                 |
+| `name`     | Card name, typos allowed                  | `pikachu`            |
+| `type`     | Pokémon type                              | `Lightning`          |
+| `category` | Pokémon, Item, Supporter, Tool or Stadium | `Supporter`          |
+| `stage`    | Evolution stage                           | `Stage2`             |
+| `rarity`   | Card rarity                               | `Crown`              |
+| `set`      | Set code or set name                      | `A1`, `Genetic Apex` |
+| `effect`   | Describe an ability or trainer effect     | `heal all Pokémon`   |
+| `attack`   | Describe an attack                        | `discard energy`     |
+| `limit`    | Maximum number of results (1 to 50)       | `10`                 |
+
+Each result includes the card's name, type, stage, rarity, HP, set, ability or effect text, attacks with energy cost and damage, and a card image link.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Your AI assistant] -- "search_cards" --> S[Pokémon TCG Pocket<br/>MCP server]
+    S --> D[(Local card database)]
+    T[(TCGdex card API)] -- "daily update" --> S
+    E[Embedding model<br/>Ollama or OpenAI] -. "understands effect<br/>and attack texts" .- S
 ```
-http://127.0.0.1:3000/mcp
-```
 
-With the Claude Code CLI:
+1. **Daily update.** The server downloads all Pokémon TCG Pocket cards from the free TCGdex API and stores them in a local database. After the first download, it only fetches sets that changed.
+2. **Understanding card texts.** An embedding model turns every ability and attack text into a vector, so the server can find cards by meaning, not only by exact words.
+3. **Search.** Your assistant calls `search_cards`. The server filters by exact fields (type, rarity, stage, set), matches names with typo tolerance, and ranks the rest by how close the ability or attack text is to your description.
 
-```sh
-claude mcp add --transport http pokemon-tcg-pocket http://127.0.0.1:3000/mcp
-```
+Technical details are in the [developer guide](README_DEV.md).
 
-Remember the warning above: this endpoint has no authentication, so only expose it on a trusted
-network, or put an authenticating reverse proxy in front of it.
+## Comparison
 
-## The `search_cards` tool
+| Feature                              | This MCP server        | Calling the TCGdex API directly | Asking an AI without tools |
+| ------------------------------------ | ---------------------- | ------------------------------- | -------------------------- |
+| Search by ability or attack meaning  | Yes                    | No                              | Unreliable                 |
+| Typo-tolerant card names             | Yes                    | No                              | Yes                        |
+| Combine filters (type + stage + set) | Yes, in one call       | Several requests                | No                         |
+| Includes newest sets                 | Yes, updated daily     | Yes                             | Only up to training cutoff |
+| Language fallback to English         | Yes                    | No                              | Varies                     |
+| Works offline after first download   | Yes (with local model) | No                              | Depends on the app         |
 
-All fields are optional except `language`; an omitted or `null` field matches everything.
+## Frequently asked questions
 
-- `language` (required) — one of the configured `LANGUAGES` values.
-- `name` — fuzzy match against the localized card name.
-- `type` — exact match on Pokémon energy type.
-- `category` — exact match (`Pokemon`, `Item`, `Supporter`, `Tool`, `Stadium`).
-- `rarity` — exact match on rarity.
-- `stage` — exact match on evolution stage (`Basic`, `Stage1`, `Stage2`, or the equivalent number).
-- `set` — a set id (`A1`) matched exactly, or a set name matched fuzzily.
-- `effect` — semantic search over ability/trainer effect text.
-- `attack` — semantic search over attack name, cost, and effect text.
-- `limit` — maximum number of results (1-50, default 10).
+### What is an MCP server?
 
-Results carry a `score` (0-1) only when `name`, `effect` or `attack` is given; otherwise they are
-ordered by card id.
+The [Model Context Protocol](https://modelcontextprotocol.io) is an open standard that lets AI assistants use external tools. This MCP server adds a Pokémon TCG Pocket card search tool to any assistant that supports MCP.
 
-Enum values (type, stage, rarity, category, attack cost) are always the canonical English values,
-even when card text is in another language.
+### Which Pokémon TCG Pocket sets are included?
 
-## Language fallback
+All sets that TCGdex lists for Pokémon TCG Pocket, including promo sets. New sets appear automatically after the next daily update.
 
-If a card does not exist in the requested language (TCGdex is missing a few sets in `de`, `es`,
-`it`, and `pt-br`), the server falls back to the English text for that card instead of omitting
-it. Such results carry a `"fallbackLanguage": "en"` field; results that exist natively in the
-requested language do not have this field. Set names fall back the same way. English text is
-always ingested and embedded, even if `LANGUAGES` excludes `en`, so that fallback results have
-usable text and vectors.
+### Which languages are supported?
 
-## Choosing an embedding model
+English (`en`), French (`fr`), German (`de`), Spanish (`es`), Italian (`it`) and Brazilian Portuguese (`pt-br`). If a card is not yet available in your language, you get the English text and the result is marked with `fallbackLanguage: "en"`.
 
-`effect` and `attack` search rank results using text embeddings, so the embedding model matters
-for search quality. If you configure any language other than `en`, you need a **multilingual**
-embedding model, since queries and card text can be in different languages, or your language of
-choice can fall back to English text. Good options: `bge-m3` (served locally via Ollama, the
-Compose default) or `text-embedding-3-small` (OpenAI). Avoid English-only models such as
-`nomic-embed-text` if you serve any non-English language.
+### Does it cost anything?
 
-Changing `EMBEDDING_MODEL` is safe: the server detects the change at startup, clears stored
-vectors, and re-embeds all card text automatically on the next ingest run. No manual migration is
-needed.
+No. The server, TCGdex and the default Ollama embedding model are free. If you choose an OpenAI embedding model instead, OpenAI charges for embeddings (well under one US dollar for the first full download).
 
-## Development commands
+### Does it include deck building, prices or meta statistics?
 
-| Command                             | Does                                                                      |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| `pnpm build`                        | Compile `src/` to `dist/`.                                                |
-| `pnpm start`                        | Run the compiled server (`node dist/index.js`).                           |
-| `pnpm dev`                          | Run TypeScript directly with `tsx`, restarting on file changes.           |
-| `pnpm typecheck`                    | Report type errors without emitting output.                               |
-| `pnpm lint` / `pnpm lint:fix`       | Run ESLint / run ESLint with autofix.                                     |
-| `pnpm format` / `pnpm format:check` | Run Prettier to write formatting / check formatting (used in CI).         |
-| `pnpm test`                         | Run tests (`node:test` via `tsx`).                                        |
-| `pnpm db:generate`                  | Generate a SQL migration in `drizzle/` from a schema change.              |
-| `pnpm db:migrate`                   | Apply pending migrations to `DATABASE_URL` without starting the server.   |
-| `pnpm check`                        | Run all checks above (typecheck, lint, format check, test). CI runs this. |
+No. It is a card search. Card data comes from TCGdex, which has no prices or tournament data for Pokémon TCG Pocket.
+
+## Limitations and security
+
+This server is built for personal use on your own computer or a trusted network:
+
+- The HTTP endpoint has no login. Keep it on `127.0.0.1` (the default) and do not expose it to the internet.
+- Run one server per database.
+
+Details and hardening options are in the [developer guide](README_DEV.md#security-and-limitations).
+
+## Credits and disclaimer
+
+Card data from [TCGdex](https://tcgdex.dev). Pokémon and Pokémon TCG Pocket are trademarks of Nintendo, Creatures and GAME FREAK. This project is not affiliated with or endorsed by The Pokémon Company, Nintendo, Creatures, GAME FREAK or DeNA.
+
+## License
+
+ISC, as declared in [package.json](package.json).

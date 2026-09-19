@@ -982,13 +982,12 @@ Deliberately skipped (add on demand):
 
 ## README requirements
 
-App `README.md` must state these limits clearly, near top, as `> [!WARNING]` alerts:
+Two readmes plus `llms.txt`, optimized for search engines and AI answer engines (GEO):
 
-- **No HTTP auth.** Anyone who reaches the HTTP port can call `search_cards`. Default bind `HOST=127.0.0.1`; compose maps port to `127.0.0.1` only. Do not expose to public network. Need public access: put reverse proxy with auth in front.
-- **No DB auth.** Compose `libsql` has no auth and no published port; only compose network reaches it. Do not publish its port. Need exposed DB: set `SQLD_AUTH_JWT_KEY` on libsql-server and `DATABASE_AUTH_TOKEN` on MCP server, secrets via `.env` or Docker secrets.
-- **Single instance only.** Run one MCP server per database. Ingest lock is in-memory. Two instances on one DB both ingest: data stays consistent, but TCGdex load doubles.
-
-README also covers: quickstart (compose and local `pnpm dev`), env var table from [Config](#config), MCP client config examples (stdio and HTTP), language fallback behavior, embedding model choice (multilingual model for non-`en` languages).
+- `README.md`: for users. One-sentence summary under title, key features, example questions, install, client setup, tool fields, simple "how it works", comparison table, FAQ with question headings. Limits (no HTTP auth, single instance) only as short section near bottom, linking to dev guide. Must not scare users at top.
+- `README_DEV.md`: for developers. Architecture, env var table, ingest, search internals, database, Docker, commands. Carries full `> [!WARNING]` alerts: no HTTP auth, no DB auth, single instance only, with hardening steps.
+- `llms.txt`: Markdown summary and doc index for AI crawlers.
+- Semantic headings (`## How to install`, not creative ones). Keywords: Pokémon TCG Pocket, MCP server, Model Context Protocol, card search, Claude.
 
 ## Open questions
 

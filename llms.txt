@@ -1,0 +1,24 @@
+# Pokémon TCG Pocket MCP Server
+
+> Open-source Model Context Protocol (MCP) server that lets AI assistants search all Pokémon TCG Pocket cards by name (fuzzy), type, category, rarity, set, evolution stage, and by the meaning of ability and attack texts (semantic search), in English, French, German, Spanish, Italian and Brazilian Portuguese. Card data comes from the TCGdex API and updates automatically every 24 hours. TypeScript, Node.js 24, libSQL, Docker.
+
+Repository: https://github.com/janthoXO/pokemon-tcg-pocket-mcp
+
+## Docs
+
+- [README](https://github.com/janthoXO/pokemon-tcg-pocket-mcp/blob/main/README.md): what the server does, installation (Docker Compose or Node.js), connecting Claude Desktop, Claude Code and other MCP clients, the search_cards tool, FAQ
+- [Developer guide](https://github.com/janthoXO/pokemon-tcg-pocket-mcp/blob/main/README_DEV.md): architecture, environment variables, ingest hash tiers, search internals, database, security limits, Docker, development commands
+- [Design document](https://github.com/janthoXO/pokemon-tcg-pocket-mcp/blob/main/DESIGN.md): design decisions and implementation notes
+
+## Tool
+
+- `search_cards`: one MCP tool. Required `language` (one of the configured languages). Optional `name` (fuzzy), `type` (Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, Dragon, Colorless), `category` (Pokemon, Item, Supporter, Tool, Stadium), `stage` (Basic, Stage1, Stage2 or 0-2), `rarity` (OneDiamond to FourDiamond, OneStar to ThreeStar, OneShiny, TwoShiny, Crown, None), `set` (set id like A1 or fuzzy set name), `effect` (semantic), `attack` (semantic), `limit` (1-50). Returns cards with localized texts, canonical English enum values, attacks with energy cost and damage, image URL and score. Cards missing in the requested language fall back to English and carry `fallbackLanguage: "en"`.
+
+## Quick facts
+
+- Transports: stdio and stateless Streamable HTTP (`/mcp`, health check `/healthz`)
+- Embeddings: any OpenAI-compatible endpoint (default Ollama with bge-m3) or OpenAI
+- Database: libSQL, embedded file or libsql-server, configured by `DATABASE_URL`
+- Configuration: environment variables only
+- Security: no built-in authentication; intended for localhost or trusted networks
+- Not affiliated with The Pokémon Company, Nintendo, Creatures, GAME FREAK or DeNA
