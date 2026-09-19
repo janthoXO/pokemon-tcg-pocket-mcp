@@ -563,10 +563,11 @@ const input = z.object({
   rarity: z.enum(Rarity).nullish(),
   stage: z.union([z.enum(Stage), z.number().int().min(0).max(2)]).nullish(),
   limit: z.number().int().min(1).max(50).default(10),
+  offset: z.number().int().min(0).default(0),
 });
 ```
 
-All fields except `language` optional. `null` or missing means no constraint. Only `language` given: all cards, first `limit` by id.
+All fields except `language` optional. `null` or missing means no constraint. Only `language` given: all cards, sorted by id, page of `limit` starting at `offset`.
 
 ### Flow
 
@@ -588,7 +589,7 @@ flowchart TD
     SEM{effect / attack given?} -- yes --> EMB["embed query text(s)<br/>similarity() on candidates only<br/>attack similarity = best attack of card"]
     SEM -- no --> R
     EMB --> R["score = mean of present similarities<br/>(name, effect, attack)"]
-    R --> OUT[sort descending, take limit]
+    R --> OUT["sort descending, slice [offset, offset+limit)"]
 ```
 
 Key choices:
@@ -648,9 +649,13 @@ Considered alternative: English only. Models translate queries well, and `en` is
       "score": 0.83
     }
   ],
+  "total": 42,
+  "nextOffset": 10,
   "dataUpdatedAt": "2026-09-19T08:00:00Z"
 }
 ```
+
+`total` counts all matches, not just this page. `nextOffset` is present only when more results remain; absent on the last page.
 
 Text localized. Enums canonical English. Returned as MCP `structuredContent` plus JSON text block.
 

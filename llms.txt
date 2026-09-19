@@ -12,7 +12,7 @@ Repository: https://github.com/janthoXO/pokemon-tcg-pocket-mcp
 
 ## Tool
 
-- `search_cards`: one MCP tool. Required `language` (one of the configured languages). Optional `name` (fuzzy), `type` (Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, Dragon, Colorless), `category` (Pokemon, Item, Supporter, Tool, Stadium), `stage` (Basic, Stage1, Stage2 or 0-2), `rarity` (OneDiamond to FourDiamond, OneStar to ThreeStar, OneShiny, TwoShiny, Crown, None), `set` (set id like A1 or fuzzy set name), `effect` (semantic), `attack` (semantic), `limit` (1-50). Returns cards with localized texts, canonical English enum values, attacks with energy cost and damage, image URL and score. Cards missing in the requested language fall back to English and carry `fallbackLanguage: "en"`.
+- `search_cards`: one MCP tool. Required `language` (one of the configured languages). Optional `name` (fuzzy), `type` (Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, Dragon, Colorless), `category` (Pokemon, Item, Supporter, Tool, Stadium), `stage` (Basic, Stage1, Stage2 or 0-2), `rarity` (OneDiamond to FourDiamond, OneStar to ThreeStar, OneShiny, TwoShiny, Crown, None), `set` (set id like A1 or fuzzy set name), `effect` (semantic), `attack` (semantic), `limit` (1-50), `offset` (skip N results, for paging). Returns cards with localized texts, canonical English enum values, attacks with energy cost and damage, image URL and score, plus `total` matches and `nextOffset` (present when more results remain). Cards missing in the requested language fall back to English and carry `fallbackLanguage: "en"`.
 
 ## Quick facts
 

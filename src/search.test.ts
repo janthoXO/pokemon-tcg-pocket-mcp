@@ -94,6 +94,7 @@ function makeSource(bySet: Record<string, { name: string; cards: Card[] }>): Car
 
 const input = (overrides: Partial<SearchInput> & { language: string }): SearchInput => ({
   limit: 10,
+  offset: 0,
   ...overrides,
 });
 
@@ -323,6 +324,29 @@ void describe('search (seeded db)', () => {
     assert.ok(charizard);
     assert.equal('fallbackLanguage' in charizard, false);
     assert.equal(charizard.name, 'Glurak');
+  });
+
+  void test('paging: limit 2 walks all cards via nextOffset', async () => {
+    const ids: string[] = [];
+    let offset = 0;
+    for (;;) {
+      const res = await search(db, makeEmbed(), input({ language: 'en', limit: 2, offset }));
+      assert.equal(res.total, 6);
+      ids.push(...res.results.map((r) => r.id));
+      if (res.nextOffset === undefined) {
+        assert.equal('nextOffset' in res, false);
+        break;
+      }
+      offset = res.nextOffset;
+    }
+    assert.deepEqual(ids, ['S1-001', 'S1-002', 'S1-003', 'S1-004', 'S1-005', 'S2-001']);
+  });
+
+  void test('paging: offset beyond total returns empty page with no nextOffset', async () => {
+    const res = await search(db, makeEmbed(), input({ language: 'en', limit: 2, offset: 100 }));
+    assert.deepEqual(res.results, []);
+    assert.equal(res.total, 6);
+    assert.equal('nextOffset' in res, false);
   });
 });
 

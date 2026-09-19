@@ -89,20 +89,21 @@ Set `LANGUAGES` to the languages you want (`en`, `fr`, `de`, `es`, `it`, `pt-br`
 
 The server gives your assistant one tool, `search_cards`. Your assistant fills in the fields for you; you just ask in normal language. Every field except `language` is optional, and empty fields match all cards.
 
-| Field      | What it does                              | Example              |
-| ---------- | ----------------------------------------- | -------------------- |
-| `language` | Language of the card texts (required)     | `en`                 |
-| `name`     | Card name, typos allowed                  | `pikachu`            |
-| `type`     | Pokémon type                              | `Lightning`          |
-| `category` | Pokémon, Item, Supporter, Tool or Stadium | `Supporter`          |
-| `stage`    | Evolution stage                           | `Stage2`             |
-| `rarity`   | Card rarity                               | `Crown`              |
-| `set`      | Set code or set name                      | `A1`, `Genetic Apex` |
-| `effect`   | Describe an ability or trainer effect     | `heal all Pokémon`   |
-| `attack`   | Describe an attack                        | `discard energy`     |
-| `limit`    | Maximum number of results (1 to 50)       | `10`                 |
+| Field      | What it does                                 | Example              |
+| ---------- | -------------------------------------------- | -------------------- |
+| `language` | Language of the card texts (required)        | `en`                 |
+| `name`     | Card name, typos allowed                     | `pikachu`            |
+| `type`     | Pokémon type                                 | `Lightning`          |
+| `category` | Pokémon, Item, Supporter, Tool or Stadium    | `Supporter`          |
+| `stage`    | Evolution stage                              | `Stage2`             |
+| `rarity`   | Card rarity                                  | `Crown`              |
+| `set`      | Set code or set name                         | `A1`, `Genetic Apex` |
+| `effect`   | Describe an ability or trainer effect        | `heal all Pokémon`   |
+| `attack`   | Describe an attack                           | `discard energy`     |
+| `limit`    | Maximum number of results (1 to 50)          | `10`                 |
+| `offset`   | Skip this many results, to get the next page | `0`                  |
 
-Each result includes the card's name, type, stage, rarity, HP, set, ability or effect text, attacks with energy cost and damage, and a card image link.
+Each result includes the card's name, type, stage, rarity, HP, set, ability or effect text, attacks with energy cost and damage, and a card image link. The response also reports `total` matching cards and, when more remain, a `nextOffset` to pass as `offset` for the next page.
 
 ## How it works
 

@@ -26,6 +26,12 @@ export const searchInput = (languages: [string, ...string[]]) =>
       .nullish()
       .describe('Evolution stage, name or 0-2.'),
     limit: z.number().int().min(1).max(50).default(10),
+    offset: z
+      .number()
+      .int()
+      .min(0)
+      .default(0)
+      .describe('Number of results to skip, for paging. Use nextOffset from the previous call.'),
   });
 
 export type SearchInput = z.infer<ReturnType<typeof searchInput>>;
@@ -118,12 +124,13 @@ export async function search(db: Db, embed: Embed, input: SearchInput) {
     return s.reduce((a, b) => a + b, 0) / (s.length || 1);
   };
   // ponytail: score = plain mean of sims, add per-field weights when ranking feels off
-  const top = ranked
+  const all = ranked
     ? candidates
         .map((c) => ({ c, score: score(c) }))
         .sort((a, b) => b.score - a.score || a.c.id.localeCompare(b.c.id))
-        .slice(0, input.limit)
-    : candidates.slice(0, input.limit).map((c) => ({ c, score: undefined }));
+    : candidates.map((c) => ({ c, score: undefined }));
+  const end = input.offset + input.limit;
+  const top = all.slice(input.offset, end);
 
   const setNames = new Map((await listSetNames(db, lang)).map((s) => [s.id, s.name]));
   return {
@@ -131,6 +138,8 @@ export async function search(db: Db, embed: Embed, input: SearchInput) {
       ...toResult(c, lang, setNames),
       ...(score === undefined ? {} : { score: Math.round(score * 1000) / 1000 }),
     })),
+    total: all.length,
+    ...(end < all.length ? { nextOffset: end } : {}),
     dataUpdatedAt: new Date(Number(meta.last_success_at)).toISOString(),
   };
 }
