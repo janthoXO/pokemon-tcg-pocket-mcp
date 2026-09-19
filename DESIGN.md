@@ -334,7 +334,7 @@ flowchart LR
 No `CardStore` interface. Swap means changing URL. One implementation makes interface pure ceremony. `db/store.ts` exports plain functions:
 
 | Function                           | Job                                                                   |
-| ----------------------------------- | ----------------------------------------------------------------------- |
+| ---------------------------------- | --------------------------------------------------------------------- |
 | `openDb(url)` (in `client.ts`)     | Connect, run pending drizzle migrations. Once at startup, with retry. |
 | `getMeta()` / `setMeta(entries)`   | Scheduler state. `null` value deletes key.                            |
 | `getSetFingerprints()`             | Set-tier diff for ingest.                                             |
@@ -497,7 +497,7 @@ flowchart TD
 ```
 
 | Tier  | Hash                              | Skips                                             |
-| ----- | ---------------------------------- | -------------------------------------------------- |
+| ----- | --------------------------------- | ------------------------------------------------- |
 | Set   | `sets.fingerprint` (from adapter) | whole set fetch (~200 card requests per language) |
 | Card  | `cards.hash`, `card_texts.hash`   | DB write                                          |
 | Embed | `card_texts.embed_hash`           | embedding call (costs money on API models)        |
@@ -697,7 +697,7 @@ Fallback result (card missing in `de`):
 ```
 
 | Command                             | Does                                                                                 |
-| ----------------------------------- | -------------------------------------------------------------------------------------- |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
 | `pnpm build`                        | Compile `src/` to `dist/`.                                                           |
 | `pnpm start`                        | Run compiled server.                                                                 |
 | `pnpm dev`                          | Run TS directly, restart on change.                                                  |
@@ -928,7 +928,7 @@ Tests:
 Deviations from draft v4, found while building (2026-09-19):
 
 | Topic              | Draft v4                             | Implemented                                    | Reason                                                                                                          |
-| ------------------ | -------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| ------------------ | ------------------------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | DB writes          | One interactive transaction per set  | One `db.batch()` per set                       | libsql opens new connection per interactive transaction: pragmas lost, `:memory:` DB lost. Batch is atomic too. |
 | Foreign keys       | `PRAGMA foreign_keys = ON` + cascade | Explicit child deletes                         | Pragma is per connection; not reliable over HTTP.                                                               |
 | Embedding          | Embed before set transaction         | Separate embed phase over `embed_hash IS NULL` | Content commits even when embedder is down. Model change reuses same path.                                      |
@@ -949,19 +949,19 @@ Data findings from first live ingest (2026-09-19, `en,de`, 15 sets, 3722 texts e
 ## Decisions
 
 | #   | Topic               | Decision                                                                                                                                  |
-| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| --- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Language            | TypeScript everywhere. `tsc` build step, real TS enums.                                                                                   |
 | 2   | Embeddings          | Admin picks model via `EMBEDDING_MODEL`, through Vercel AI SDK. API or local (OpenAI-compatible endpoint, Ollama in compose).             |
 | 3   | Storage             | libSQL. One drizzle schema, one migration folder. `DATABASE_URL` picks embedded file or libsql-server container. Native vector functions. |
-| 4   | Card scope          | All cards (Pokémon and Trainer). `category` filter.                                                                                   |
-| 5   | Transport           | stdio and Streamable HTTP. `TRANSPORTS` list picks one or both.                                                                          |
+| 4   | Card scope          | All cards (Pokémon and Trainer). `category` filter.                                                                                       |
+| 5   | Transport           | stdio and Streamable HTTP. `TRANSPORTS` list picks one or both.                                                                           |
 | 6   | Combining           | Enum and fuzzy fields filter. Embedding fields rank.                                                                                      |
 | 7   | Enum values         | Canonical English keys in every language.                                                                                                 |
 | 8   | Interval            | 24h default, env configurable.                                                                                                            |
 | 9   | Data source         | TCGdex REST. Per-card fetch. Set-level adapter API.                                                                                       |
 | 10  | Ingest diff         | Hash tiers: set fingerprint, card hash, embed hash. Weekly full refresh for errata. Never wipe.                                           |
 | 11  | Quality             | ESLint (`typescript-eslint` strict) and Prettier, separate commands.                                                                      |
-| 12  | Deploy              | Dockerfile and compose: `mcp`, `libsql`, `ollama`.                                                                                         |
+| 12  | Deploy              | Dockerfile and compose: `mcp`, `libsql`, `ollama`.                                                                                        |
 | 13  | No Postgres         | Small data, one writer. Postgres and second dialect dropped. DB interface dropped until second DB is real.                                |
 | 14  | Config              | Env vars only, no CLI flags. Multi-value settings are comma lists, no combination enum members.                                           |
 | 15  | Missing language    | Fall back to `en` text, mark `fallbackLanguage: "en"`. See [Language fallback](#language-fallback).                                       |
