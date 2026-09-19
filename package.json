@@ -1,0 +1,54 @@
+{
+  "name": "pokemon-tcg-pocket-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Pokémon TCG Pocket card search",
+  "private": true,
+  "license": "ISC",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.70",
+    "@ai-sdk/openai-compatible": "^3.0.52",
+    "@libsql/client": "^0.18.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "ai": "^7.0.106",
+    "drizzle-orm": "^0.45.2",
+    "fuse.js": "^7.5.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.5",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.8",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.0"
+  },
+  "packageManager": "pnpm@12.4.2",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.4.2",
+      "onFail": "download"
+    }
+  }
+}
